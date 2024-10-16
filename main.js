@@ -27,7 +27,6 @@
 */
 
 // Array Of Words
-
 const easyWords = ["NaN", "null", "DOM"];
 const normalWords = ["class", "arrow", "loop"];
 const hardWords = ["constructor", "destructuring", "undefined"];
@@ -45,6 +44,7 @@ let defaultLevelSeconds = lvls[defaultLevelName];
 let words = normalWords; // default array
 let selectedLevel = defaultLevelName;
 let levelChanged = false; // Track if the level was changed
+let firstWordBonusApplied = false; // Track if bonus is applied
 
 // Catch Selectors
 let startButton = document.querySelector(".start");
@@ -88,6 +88,8 @@ levels.addEventListener("change", function () {
   secondsSpan.innerHTML = lvls[selectedLevel];
   // reset time left in page
   timeLeftSpan.innerHTML = lvls[selectedLevel];
+   // instruction update
+   updateInstructions()
 });
 
 // Start Game
@@ -96,6 +98,8 @@ startButton.onclick = function () {
   input.focus();
   // Generate Word Function
   genWords();
+  // instruction update
+  updateInstructions()
 };
 
 function genWords() {
@@ -117,11 +121,7 @@ function genWords() {
     div.appendChild(txt);
     upcomingWords.appendChild(div);
   }
-  // add 3second to the first word
-  if (randomWord !== upcomingWords.firstElementChild.textContent) {
-    timeLeftSpan.innerHTML = parseInt(timeLeftSpan.innerHTML) + 3;
-    console.log(timeLeftSpan.innerHTML)
-  }
+
   // Call Start Play Function
   startPlay();
 }
@@ -160,13 +160,38 @@ function startPlay() {
       }
     }
   }, 1000);
+ 
 }
 
 // Function to reset time for each word
+
 function resetTime() {
   if (levelChanged) {
     timeLeftSpan.innerHTML = lvls[selectedLevel]; // Use selected level's time
   } else {
     timeLeftSpan.innerHTML = defaultLevelSeconds; // Use default level's time
   }
+  // add 3second to the first word
+  if (
+    !firstWordBonusApplied &&
+    theWord.innerHTML !== upcomingWords.firstElementChild.textContent
+  ) {
+    timeLeftSpan.innerHTML = parseInt(timeLeftSpan.innerHTML) + 3;
+    firstWordBonusApplied = true;
+  }
 }
+
+// game insturction 
+function updateInstructions() {
+  const instructions = `
+    Welcome to the Word Typing Game!
+    - Level: ${selectedLevel}
+    - Time Left: ${timeLeftSpan.innerHTML} seconds
+    - Score: ${scoreGot.innerHTML} out of ${scorTotal.innerHTML}
+    - Type the word shown and hit Enter to score points.
+    - If you get it right, you’ll get more time for the next word!
+  `;
+  document.getElementById("gameInstructions").innerHTML = instructions;
+}
+
+updateInstructions()
