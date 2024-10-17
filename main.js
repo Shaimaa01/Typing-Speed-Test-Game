@@ -32,19 +32,15 @@ const normalWords = ["class", "arrow", "loop"];
 const hardWords = ["constructor", "destructuring", "undefined"];
 
 // Setting Levels
-const lvls = {
-  Easy: 5,
-  Normal: 3,
-  Hard: 2,
-};
+const lvls = { Easy: 5, Normal: 3, Hard: 2 };
 
 // Default Level
-let defaultLevelName = "Normal"; // change Level From Here
+let defaultLevelName = "Normal";
 let defaultLevelSeconds = lvls[defaultLevelName];
-let words = normalWords; // default array
+let words = normalWords;
 let selectedLevel = defaultLevelName;
-let levelChanged = false; // Track if the level was changed
-let firstWordBonusApplied = false; // Track if bonus is applied
+let levelChanged = false;
+let firstWordBonusApplied = false;
 
 // Catch Selectors
 let startButton = document.querySelector(".start");
@@ -59,70 +55,55 @@ let scorTotal = document.querySelector(".score .total");
 let finishMessage = document.querySelector(".finish");
 let levels = document.getElementById("levels");
 
-// Setting Level Name + Seconds + Score
+// Load Data from LocalStorage
+getDataFromLocalStorage();
+
+// Set Initial Values
 lvlNameSpan.innerHTML = defaultLevelName;
 secondsSpan.innerHTML = defaultLevelSeconds;
 timeLeftSpan.innerHTML = defaultLevelSeconds;
 scorTotal.innerHTML = words.length;
 
 // Disable Paste Event
-input.onpaste = function () {
-  return false;
-};
+input.onpaste = () => false;
 
-// select level
+// Level Selection Logic
 levels.addEventListener("change", function () {
   selectedLevel = this.value;
-  levelChanged = true; // Mark level as changed
-  if (selectedLevel == "Easy") {
-    //select array
-    words = easyWords;
-  } else if (selectedLevel == "Normal") {
-    words = normalWords;
-  } else if (selectedLevel == "Hard") {
-    words = hardWords;
-  }
-  // reset level name in page
+  levelChanged = true;
+  words =
+    selectedLevel === "Easy"
+      ? easyWords
+      : selectedLevel === "Hard"
+      ? hardWords
+      : normalWords;
+
   lvlNameSpan.innerHTML = selectedLevel;
-  // reset seconds in page
   secondsSpan.innerHTML = lvls[selectedLevel];
-  // reset time left in page
   timeLeftSpan.innerHTML = lvls[selectedLevel];
-   // instruction update
-   updateInstructions()
 });
 
 // Start Game
 startButton.onclick = function () {
   this.remove();
   input.focus();
-  // Generate Word Function
+  scoreGot.innerHTML = 0;
+  selectedLevel = defaultLevelName;
+  // Clear old messages when the game starts
+  clearFinishMessage();
   genWords();
-  // instruction update
-  updateInstructions()
+  updateInstructions();
 };
 
 function genWords() {
-  // Get Random Word Form Array
-  let randomWord = words[Math.floor(Math.random() * words.length)];
-  // Get Word Index
-  let wordIndex = words.indexOf(randomWord);
-  // Remove Word From Array
-  words.splice(wordIndex, 1);
-  // show The Random Word
+  let randomWord = words.splice(Math.floor(Math.random() * words.length), 1)[0];
   theWord.innerHTML = randomWord;
-  // Empty Upcoming Words
-  upcomingWords.innerHTML = " ";
-  // Generate UpcomingWords
-  for (let i = 0; i < words.length; i++) {
-    // Create Div Element
-    let div = document.createElement("div");
-    let txt = document.createTextNode(words[i]);
-    div.appendChild(txt);
-    upcomingWords.appendChild(div);
-  }
+  upcomingWords.innerHTML = words.map((w) => `<div>${w}</div>`).join("");
 
-  // Call Start Play Function
+  if (!firstWordBonusApplied) {
+    timeLeftSpan.innerHTML = +timeLeftSpan.innerHTML + 3;
+    firstWordBonusApplied = true;
+  }
   startPlay();
 }
 
@@ -131,67 +112,59 @@ function startPlay() {
   let start = setInterval(() => {
     timeLeftSpan.innerHTML--;
     if (timeLeftSpan.innerHTML === "0") {
-      // Stop Timer
       clearInterval(start);
-      // compare Words
       if (theWord.innerHTML.toLowerCase() === input.value.toLowerCase()) {
-        // Empty Input field
         input.value = "";
-        // Increase Score
         scoreGot.innerHTML++;
-        if (words.length > 0) {
-          // Call Generate Word Funcion
-          genWords();
-        } else {
-          let span = document.createElement("span");
-          span.className = "good";
-          let spanText = document.createTextNode("Congratz");
-          span.appendChild(spanText);
-          finishMessage.appendChild(span);
-          // Remove Upcoming Words Box
-          upcomingWords.remove();
-        }
+        addDataToLocalStorage();
+        words.length > 0 ? genWords() : showResult("Congratz", "good");
       } else {
-        let span = document.createElement("span");
-        span.className = "bad";
-        let spanText = document.createTextNode("Game Over");
-        span.appendChild(spanText);
-        finishMessage.appendChild(span);
+        showResult("Game Over", "bad");
       }
     }
   }, 1000);
- 
 }
-
-// Function to reset time for each word
 
 function resetTime() {
-  if (levelChanged) {
-    timeLeftSpan.innerHTML = lvls[selectedLevel]; // Use selected level's time
-  } else {
-    timeLeftSpan.innerHTML = defaultLevelSeconds; // Use default level's time
-  }
-  // add 3second to the first word
-  if (
-    !firstWordBonusApplied &&
-    theWord.innerHTML !== upcomingWords.firstElementChild.textContent
-  ) {
-    timeLeftSpan.innerHTML = parseInt(timeLeftSpan.innerHTML) + 3;
-    firstWordBonusApplied = true;
-  }
+  timeLeftSpan.innerHTML = levelChanged
+    ? lvls[selectedLevel]
+    : defaultLevelSeconds;
 }
 
-// game insturction 
 function updateInstructions() {
-  const instructions = `
+  document.getElementById("gameInstructions").innerHTML = `
     Welcome to the Word Typing Game!
     - Level: ${selectedLevel}
     - Time Left: ${timeLeftSpan.innerHTML} seconds
     - Score: ${scoreGot.innerHTML} out of ${scorTotal.innerHTML}
     - Type the word shown and hit Enter to score points.
-    - If you get it right, you’ll get more time for the next word!
   `;
-  document.getElementById("gameInstructions").innerHTML = instructions;
 }
 
-updateInstructions()
+function showResult(message, className) {
+  let span = document.createElement("span");
+  span.className = className;
+  span.textContent = message;
+  finishMessage.appendChild(span);
+  upcomingWords.remove();
+  addDataToLocalStorage();
+}
+
+function addDataToLocalStorage() {
+  localStorage.setItem("score", scoreGot.innerHTML);
+  localStorage.setItem("level", lvlNameSpan.innerHTML);
+  localStorage.setItem("finishMessage", finishMessage.innerHTML);
+}
+
+function getDataFromLocalStorage() {
+  scoreGot.innerHTML = localStorage.getItem("score") || 0;
+  selectedLevel = localStorage.getItem("level") || defaultLevelName;
+  lvlNameSpan.innerHTML = selectedLevel;
+  finishMessage.innerHTML = localStorage.getItem("finishMessage") || "";
+}
+
+function clearFinishMessage() {
+  finishMessage.innerHTML = ""; // Clear any old message
+}
+
+updateInstructions() 
